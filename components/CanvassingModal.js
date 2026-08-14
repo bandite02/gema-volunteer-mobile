@@ -29,6 +29,9 @@ export default function CanvassingModal({
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [segmentation, setSegmentation] = useState('KUAT');
+  const [maritalStatus, setMaritalStatus] = useState('SINGLE');
+  const [hasChildren, setHasChildren] = useState(false);
+  const [lines, setLines] = useState([]);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,11 +40,21 @@ export default function CanvassingModal({
       setFullName(editItem.full_name || '');
       setPhone(editItem.phone || '');
       setSegmentation(editItem.segmentation || 'KUAT');
+      setMaritalStatus(editItem.marital_status || 'SINGLE');
+      setHasChildren(Boolean(editItem.has_children));
+      if (editItem.lines && editItem.lines.length > 0) {
+        setLines(editItem.lines.map(l => ({ child_name: l.child_name || '', education_level: l.education_level || 'SD' })));
+      } else {
+        setLines([]);
+      }
       setNotes(editItem.notes || '');
     } else {
       setFullName('');
       setPhone('');
       setSegmentation('KUAT');
+      setMaritalStatus('SINGLE');
+      setHasChildren(false);
+      setLines([]);
       setNotes('');
     }
   }, [editItem, visible]);
@@ -53,10 +66,45 @@ export default function CanvassingModal({
     { label: 'Menolak', value: 'MENOLAK', color: '#DC2626', bg: '#FEE2E2' },
   ];
 
+  const maritalStatusOptions = [
+    { label: 'Belum Menikah', value: 'SINGLE' },
+    { label: 'Menikah', value: 'MARRIED' },
+    { label: 'Duda / Janda', value: 'DIVORCED' },
+  ];
+
+  const educationLevels = ['Belum Sekolah', 'TK', 'SD', 'SMP', 'SMA/SMK', 'Diploma', 'S1/S2/S3'];
+
+  const handleAddChild = () => {
+    setLines([...lines, { child_name: '', education_level: 'SD' }]);
+  };
+
+  const handleRemoveChild = (index) => {
+    setLines(lines.filter((_, i) => i !== index));
+  };
+
+  const handleChildChange = (index, field, value) => {
+    const updated = [...lines];
+    updated[index][field] = value;
+    setLines(updated);
+  };
+
   const handleSubmit = async () => {
     if (!fullName.trim()) {
       Alert.alert('Validasi', 'Mohon isi nama lengkap calon pemilih / warga.');
       return;
+    }
+
+    if (hasChildren) {
+      if (lines.length === 0) {
+        Alert.alert('Validasi', 'Mohon tambahkan minimal 1 data anak atau pilih "Tidak" jika belum memiliki anak.');
+        return;
+      }
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].child_name.trim()) {
+          Alert.alert('Validasi', `Mohon isi nama anak ke-${i + 1}.`);
+          return;
+        }
+      }
     }
 
     try {
@@ -65,6 +113,9 @@ export default function CanvassingModal({
         full_name: fullName.trim(),
         phone: phone.trim() || null,
         segmentation,
+        marital_status: maritalStatus,
+        has_children: hasChildren,
+        lines: hasChildren ? lines.map(l => ({ child_name: l.child_name.trim(), education_level: l.education_level })) : [],
         notes: notes.trim() || null,
         district_code: user?.district_code || editItem?.district_code || '33.71.01',
         subdistrict_code: user?.subdistrict_code || editItem?.subdistrict_code || '33.71.01.1001',
@@ -122,7 +173,7 @@ export default function CanvassingModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ maxHeight: 420 }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
             <Text style={styles.inputLabel}>
               Nama Lengkap Warga / Pemilih <Text style={{ color: '#DC2626' }}>*</Text>
             </Text>
@@ -166,6 +217,121 @@ export default function CanvassingModal({
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Status Pernikahan */}
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>Status Pernikahan</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 6 }}>
+              {maritalStatusOptions.map(opt => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.chipSelectBtn,
+                    maritalStatus === opt.value && styles.chipSelectBtnActive
+                  ]}
+                  onPress={() => setMaritalStatus(opt.value)}
+                >
+                  <Text style={[
+                    styles.chipSelectText,
+                    maritalStatus === opt.value && styles.chipSelectTextActive
+                  ]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Status Memiliki Anak */}
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>Memiliki Anak?</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+              <TouchableOpacity
+                style={[
+                  styles.chipSelectBtn,
+                  hasChildren && styles.chipSelectBtnActive
+                ]}
+                onPress={() => {
+                  setHasChildren(true);
+                  if (lines.length === 0) {
+                    setLines([{ child_name: '', education_level: 'SD' }]);
+                  }
+                }}
+              >
+                <Text style={[styles.chipSelectText, hasChildren && styles.chipSelectTextActive]}>
+                  ✓ Ya, Memiliki Anak
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.chipSelectBtn,
+                  !hasChildren && styles.chipSelectBtnActive
+                ]}
+                onPress={() => {
+                  setHasChildren(false);
+                  setLines([]);
+                }}
+              >
+                <Text style={[styles.chipSelectText, !hasChildren && styles.chipSelectTextActive]}>
+                  Tidak
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* List Anak if hasChildren is true */}
+            {hasChildren && (
+              <View style={styles.childSectionCard}>
+                <View style={styles.childHeaderRow}>
+                  <Text style={styles.childSectionTitle}>👶 Data Anak ({lines.length})</Text>
+                  <TouchableOpacity style={styles.addChildBtn} onPress={handleAddChild}>
+                    <Feather name="plus" size={14} color={WHITE} />
+                    <Text style={styles.addChildBtnText}>Tambah Anak</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {lines.map((line, idx) => (
+                  <View key={idx} style={styles.childItemCard}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY_BLUE }}>Anak ke-{idx + 1}</Text>
+                      {lines.length > 1 && (
+                        <TouchableOpacity onPress={() => handleRemoveChild(idx)}>
+                          <Feather name="trash-2" size={14} color="#DC2626" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    <TextInput
+                      style={[styles.cleanTextInput, { marginBottom: 8, backgroundColor: WHITE }]}
+                      placeholder="Nama Anak..."
+                      value={line.child_name}
+                      onChangeText={(val) => handleChildChange(idx, 'child_name', val)}
+                      placeholderTextColor="#9CA3AF"
+                    />
+
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: DARK_GRAY, marginBottom: 4 }}>Jenjang Pendidikan:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {educationLevels.map(edu => (
+                          <TouchableOpacity
+                            key={edu}
+                            style={[
+                              styles.eduChip,
+                              line.education_level === edu && styles.eduChipActive
+                            ]}
+                            onPress={() => handleChildChange(idx, 'education_level', edu)}
+                          >
+                            <Text style={[
+                              styles.eduChipText,
+                              line.education_level === edu && styles.eduChipTextActive
+                            ]}>
+                              {edu}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>Catatan / Aspirasi Warga</Text>
             <TextInput
@@ -299,4 +465,87 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+  chipSelectBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+  },
+  chipSelectBtnActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: PRIMARY_BLUE,
+  },
+  chipSelectText: {
+    fontSize: 12,
+    color: DARK_GRAY,
+    fontWeight: '500',
+  },
+  chipSelectTextActive: {
+    color: PRIMARY_BLUE,
+    fontWeight: '700',
+  },
+  childSectionCard: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  childHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  childSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: PRIMARY_BLUE,
+  },
+  addChildBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: PRIMARY_BLUE,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  addChildBtnText: {
+    color: WHITE,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  childItemCard: {
+    backgroundColor: WHITE,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginBottom: 8,
+  },
+  eduChip: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F1F5F9',
+  },
+  eduChipActive: {
+    backgroundColor: PRIMARY_BLUE,
+    borderColor: PRIMARY_BLUE,
+  },
+  eduChipText: {
+    fontSize: 11,
+    color: DARK_GRAY,
+  },
+  eduChipTextActive: {
+    color: WHITE,
+    fontWeight: '700',
+  },
 });
+

@@ -35,8 +35,9 @@ import ProfileScreen from './screens/ProfileScreen';
 import CanvassingScreen from './screens/CanvassingScreen';
 import CanvassingModal from './components/CanvassingModal';
 
-// Base API URL for Android Emulator pointing to Host Localhost
-const API_URL = 'http://10.0.2.2:8000/api';
+// Base API URL for Android App (Production Server)
+const API_URL = 'https://volunteer-api.gemakita.id/api';
+
 
 const PRIMARY_BLUE = '#21439A';
 const SECONDARY_BLUE = '#21439A';
@@ -648,6 +649,7 @@ export default function App() {
     }
     setLoading(true);
     try {
+      delete axios.defaults.headers.common['Authorization'];
       const res = await axios.post(`${API_URL}/login`, { username, password });
       if (res.data && res.data.status) {
         const authToken = res.data.meta.token;
@@ -664,6 +666,12 @@ export default function App() {
         setScreen('DASHBOARD');
       }
     } catch (e) {
+      console.error("=== LOGIN DEBUG ERROR ===");
+      console.error("Status:", e.response?.status);
+      console.error("Data:", JSON.stringify(e.response?.data, null, 2));
+      console.error("Message:", e.message);
+      console.error("=========================");
+
       const errors = e.response?.data?.message;
       let errorMsg = 'Gagal login, periksa koneksi internet Anda.';
       if (errors && typeof errors === 'object') {
@@ -671,7 +679,8 @@ export default function App() {
       } else if (typeof errors === 'string') {
         errorMsg = errors;
       }
-      Alert.alert('Gagal Login', errorMsg);
+      const codeMsg = e.response?.status ? ` [HTTP ${e.response.status}]` : '';
+      Alert.alert('Gagal Login', `${errorMsg}${codeMsg}`);
     } finally {
       setLoading(false);
     }

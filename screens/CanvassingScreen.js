@@ -113,6 +113,33 @@ export default function CanvassingScreen({ apiUrl, token, user }) {
                     {getSegmentationBadge(c.segmentation)}
                   </View>
                   <Text style={styles.canvassPhone}>WA: {c.phone || '-'}</Text>
+                  
+                  {/* Status Pernikahan & Anak */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    <View style={styles.infoBadge}>
+                      <Text style={styles.infoBadgeText}>
+                        💍 {c.marital_status === 'MARRIED' ? 'Menikah' : c.marital_status === 'DIVORCED' ? 'Duda/Janda' : 'Belum Menikah'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoBadge}>
+                      <Text style={styles.infoBadgeText}>
+                        👶 {c.has_children && c.lines && c.lines.length > 0 ? `${c.lines.length} Anak` : 'Tanpa Anak'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* List Anak if available */}
+                  {c.has_children && c.lines && c.lines.length > 0 && (
+                    <View style={styles.childrenListCard}>
+                      {c.lines.map((child, i) => (
+                        <Text key={child.id || i} style={styles.childLineText}>
+                          • {child.child_name} ({child.education_level})
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+
                   {c.notes ? <Text style={styles.canvassNotes}>Catatan: {c.notes}</Text> : null}
                 </View>
 
@@ -258,4 +285,31 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     textAlign: 'center',
   },
+  infoBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  infoBadgeText: {
+    fontSize: 10,
+    color: DARK_GRAY,
+    fontWeight: '600',
+  },
+  childrenListCard: {
+    backgroundColor: '#F8FAFC',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  childLineText: {
+    fontSize: 11,
+    color: PRIMARY_BLUE,
+    fontWeight: '500',
+  },
 });
+
