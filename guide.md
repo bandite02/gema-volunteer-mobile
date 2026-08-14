@@ -4,18 +4,24 @@ Dokumen ini berisi ringkasan cara menjalankan (Development/Debug) dan membuat in
 
 ---
 
-## 🛠️ 1. Persiapan Environment (Khusus Windows)
+## 📥 1. Urutan Langkah Pertama Kali Setelah Clone Repository
 
-Sebelum melakukan build Release lokal, pastikan variabel `JAVA_HOME` dan `ANDROID_HOME` sudah terkonfigurasi.
+Jika Anda baru saja me-clone repositori ini di komputer baru, ikuti urutan langkah berikut:
 
-### A. Mengeset Environment Variables di Terminal PowerShell (Per Sesi):
-```powershell
-$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
-$env:ANDROID_HOME="C:\Users\who i am\AppData\Local\Android\Sdk"
-$env:Path="$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
+### Langkah 1: Install Dependencies Node Modules
+Buka terminal di folder `mobile`, lalu jalankan:
+```bash
+npm install
 ```
 
-### B. Mengeset Secara Permanen di Windows:
+### Langkah 2: Buat Berkas Konfigurasi `local.properties` Android
+Buat berkas bernama `local.properties` di dalam folder `mobile/android/` dan isikan path SDK & NDK berikut:
+```ini
+sdk.dir=C\:\\Users\\who i am\\AppData\\Local\\Android\\Sdk
+ndk.dir=C\:\\Users\\who i am\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125
+```
+
+### Langkah 3: Set Environment Variable Java & Android SDK (Khusus Windows)
 Jalankan perintah ini di PowerShell sekali saja:
 ```powershell
 [System.Environment]::SetEnvironmentVariable('JAVA_HOME', 'C:\Program Files\Android\Android Studio\jbr', 'User')
@@ -24,16 +30,17 @@ Jalankan perintah ini di PowerShell sekali saja:
 
 ---
 
-## 🚀 2. Cara Run Mode Development (Debugging)
+## 🚀 2. Cara Run Mode Development (Debugging via Expo Go)
 
-Mode ini digunakan saat proses pengkodean (development) di mana Anda bisa melihat perubahan secara langsung (*Hot Reload*).
+Mode ini digunakan saat proses pengkodean (development) di mana Anda bisa melihat perubahan kode secara langsung (*Hot Reload*) via Expo Go.
 
 1. Buka terminal di folder `mobile`.
-2. Jalankan perintah:
+2. Jalankan perintah (menggunakan flag `--clear` untuk membersihkan cache bundler):
    ```powershell
-   npm start
+   npx expo start --clear
    ```
 3. Buka aplikasi **Expo Go** di HP, lalu scan QR Code yang tampil di terminal.
+4. *Tips Debugging:* Tekan tombol **`j`** di terminal untuk membuka **Chrome DevTools Debugger** di laptop.
 
 ---
 
