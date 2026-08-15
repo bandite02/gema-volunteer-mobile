@@ -29,39 +29,39 @@ export default function HomeScreen({
 
   const isRegisteredVolunteer = Boolean(user?.profile || user?.volunteer);
 
-  // Active Tasks Filter (Strictly filter for current volunteer user)
+  // Active Tasks Filter (Case-insensitive status and robust volunteer assignment check)
   const userVolId = user?.volunteer?.id || user?.profile?.id;
-  const activeTasks = (assignedTasks || []).filter(t => {
-    if (t.status === 'COMPLETED') return false;
+  const isVolunteerTarget = (t) => {
     if (isOfficer) return true;
-    // Volunteer strict assignment check
-    if (userVolId && (t.assigned_to_volunteer_id == userVolId)) return true;
-    if (t.volunteer && (t.volunteer.user_id == user?.id)) return true;
+    if (userVolId && t.assigned_to_volunteer_id == userVolId) return true;
+    if (t.assigned_to_volunteer_id == user?.id) return true;
+    if (t.assigned_by == user?.id) return true;
+    if (t.volunteer && t.volunteer.user_id == user?.id) return true;
     return false;
+  };
+
+  const activeTasks = (assignedTasks || []).filter(t => {
+    const st = (t.status || '').toUpperCase();
+    if (st === 'COMPLETED') return false;
+    return isVolunteerTarget(t);
   });
 
   const pendingTasksCount = (assignedTasks || []).filter(t => {
-    if (t.status !== 'PENDING') return false;
-    if (isOfficer) return true;
-    if (userVolId && (t.assigned_to_volunteer_id == userVolId)) return true;
-    if (t.volunteer && (t.volunteer.user_id == user?.id)) return true;
-    return false;
+    const st = (t.status || '').toUpperCase();
+    if (st !== 'PENDING') return false;
+    return isVolunteerTarget(t);
   }).length;
 
   const inProgressTasksCount = (assignedTasks || []).filter(t => {
-    if (t.status !== 'IN_PROGRESS') return false;
-    if (isOfficer) return true;
-    if (userVolId && (t.assigned_to_volunteer_id == userVolId)) return true;
-    if (t.volunteer && (t.volunteer.user_id == user?.id)) return true;
-    return false;
+    const st = (t.status || '').toUpperCase();
+    if (st !== 'IN_PROGRESS') return false;
+    return isVolunteerTarget(t);
   }).length;
 
   const completedTasksCount = (assignedTasks || []).filter(t => {
-    if (t.status !== 'COMPLETED') return false;
-    if (isOfficer) return true;
-    if (userVolId && (t.assigned_to_volunteer_id == userVolId)) return true;
-    if (t.volunteer && (t.volunteer.user_id == user?.id)) return true;
-    return false;
+    const st = (t.status || '').toUpperCase();
+    if (st !== 'COMPLETED') return false;
+    return isVolunteerTarget(t);
   }).length;
 
   useEffect(() => {

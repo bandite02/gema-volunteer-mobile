@@ -20,23 +20,27 @@ import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as SecureStore from 'expo-secure-store';
-import RegisterScreen from './components/RegisterScreen';
+import RegisterScreen from './src/components/RegisterScreen';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import axios from 'axios';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import AssignTaskModal from './components/AssignTaskModal';
-import HomeScreen from './screens/HomeScreen';
-import TasksScreen from './screens/TasksScreen';
-import ApprovalScreen from './screens/ApprovalScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import CanvassingScreen from './screens/CanvassingScreen';
-import CanvassingModal from './components/CanvassingModal';
+import AssignTaskModal from './src/components/AssignTaskModal';
+import Header from './src/components/Header';
+import BottomNav from './src/components/BottomNav';
+import FloatingFAB from './src/components/FloatingFAB';
+import HomeScreen from './src/screens/HomeScreen';
+import TasksScreen from './src/screens/TasksScreen';
+import ApprovalScreen from './src/screens/ApprovalScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import CanvassingScreen from './src/screens/CanvassingScreen';
+import VolunteerFormScreen from './src/screens/VolunteerFormScreen';
+import CanvassingModal from './src/components/CanvassingModal';
 
-// Base API URL for Android App (Production Server)
-const API_URL = 'https://volunteer-api.gemakita.id/api';
+// Base API URL for Android App (.env configuration)
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://volunteer-api.gemakita.id/api';
 
 
 const PRIMARY_BLUE = '#21439A';
@@ -459,21 +463,16 @@ export default function App() {
       if (savedToken) {
         setToken(savedToken);
         axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
-        
-        // Fetch user profile if online
+        const savedUser = await AsyncStorage.getItem('gema_auth_user');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
+        setScreen('DASHBOARD');
         if (isOnline) {
           fetchUserProfile(savedToken);
-        } else {
-          const savedUser = await AsyncStorage.getItem('gema_auth_user');
-          if (savedUser) {
-            setUser(JSON.parse(savedUser));
-            setScreen('DASHBOARD');
-          } else {
-            setScreen('AUTH');
-          }
         }
       } else {
-        setTimeout(() => setScreen('AUTH'), 1500);
+        setScreen('AUTH');
       }
     } catch (e) {
       setScreen('AUTH');
@@ -1007,78 +1006,13 @@ export default function App() {
           <View style={styles.dashboardContainer}>
             {/* Header Gradient ONLY ON BERANDA TAB */}
             {dashboardTab === 'home' && (
-              <LinearGradient
-                colors={['#004AD7', '#002E8A']}
-                style={styles.dashboardHeaderGradient}
-              >
-                <View style={styles.dashboardHeaderRow}>
-                  <View>
-                    <Text style={styles.dashboardWelcomeText}>
-                      Halo, {user?.name?.split(' ')[0]}! {!isOfficerUser(user) ? '👋' : ''}
-                    </Text>
-                    <Text style={styles.dashboardUserLevel}>
-                      {isOfficerUser(user)
-                        ? `Peran: Pengurus / Role: ${user?.roles?.[0]?.name || user?.role || 'pengurus_ds_jurangombo'}`
-                        : 'Level Relawan: Volunteer'}
-                    </Text>
-                  </View>
-                  <View style={styles.dashboardHeaderActions}>
-                    <TouchableOpacity
-                      style={styles.dashboardHeaderActionButton}
-                      onPress={() => setDashboardTab('notif')}
-                    >
-                      <Feather name="inbox" size={18} color={WHITE} />
-                      {pendingVolunteers.length > 0 && <View style={styles.notifBadgeDot} />}
-                    </TouchableOpacity>
-                    <View style={styles.headerAvatarContainer}>
-                      <Text style={styles.headerAvatarText}>
-                        {user?.name ? user.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() : 'U'}
-                      </Text>
-                      <View style={styles.onlineStatusDot} />
-                    </View>
-                  </View>
-                </View>
-
-                {/* Status Registrasi Relawan Card Overlay for Volunteers */}
-                {!isOfficerUser(user) && (
-                  <View style={styles.glassHeaderCard}>
-                    <View style={styles.glassHeaderCardTopRow}>
-                      <Text style={styles.glassHeaderCardTitle}>Status Registrasi Relawan</Text>
-                      <View style={(user?.profile || user?.volunteer) ? styles.glassBadgeGreen : styles.glassBadgeRed}>
-                        <Text style={styles.glassBadgeGreenText}>
-                          {(user?.profile || user?.volunteer) ? 'TERDAFTAR' : 'BELUM REGISTRASI'}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.glassHeaderCardGrid}>
-                      <View style={styles.glassHeaderCardCol}>
-                        <View style={styles.glassIconCircle}>
-                          <Feather name="user" size={14} color="#004AD7" />
-                        </View>
-                        <Text style={styles.glassColLabel}>Nama Lengkap</Text>
-                        <Text style={styles.glassColValue} numberOfLines={1}>{user?.profile?.full_name || user?.volunteer?.full_name || user?.name || '-'}</Text>
-                      </View>
-
-                      <View style={styles.glassHeaderCardCol}>
-                        <View style={styles.glassIconCircle}>
-                          <Feather name="message-circle" size={14} color="#16A34A" />
-                        </View>
-                        <Text style={styles.glassColLabel}>WhatsApp</Text>
-                        <Text style={styles.glassColValue} numberOfLines={1}>{user?.profile?.phone || user?.volunteer?.phone || '-'}</Text>
-                      </View>
-
-                      <View style={styles.glassHeaderCardCol}>
-                        <View style={styles.glassIconCircle}>
-                          <Feather name="briefcase" size={14} color="#D97706" />
-                        </View>
-                        <Text style={styles.glassColLabel}>Pekerjaan</Text>
-                        <Text style={styles.glassColValue} numberOfLines={1}>{user?.profile?.occupation || user?.volunteer?.occupation || '-'}</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-              </LinearGradient>
+              <Header
+                user={user}
+                isOfficer={isOfficerUser(user)}
+                pendingVolunteersCount={pendingVolunteers.length}
+                onOpenNotif={() => setDashboardTab('notif')}
+                onOpenProfile={() => setDashboardTab('profile')}
+              />
             )}
 
             {/* Scrollable Tab Content */}
@@ -1190,10 +1124,9 @@ export default function App() {
               )}
             </ScrollView>
 
-            {/* Fixed Floating Action Button (+) for Officers (Assign Task) & Volunteers (Canvassing) */}
+            {/* Fixed Floating Action Button (+) for Officers & Volunteers */}
             {(dashboardTab === 'home' || dashboardTab === 'notif') && (
-              <TouchableOpacity
-                style={styles.fabButtonFixed}
+              <FloatingFAB
                 onPress={() => {
                   if (isOfficerUser(user)) {
                     setAssignModalVisible(true);
@@ -1201,10 +1134,7 @@ export default function App() {
                     setCanvassingModalVisible(true);
                   }
                 }}
-                activeOpacity={0.85}
-              >
-                <Feather name="plus" size={24} color={WHITE} />
-              </TouchableOpacity>
+              />
             )}
 
             {/* Global Canvassing Modal */}
@@ -1217,446 +1147,29 @@ export default function App() {
               onCanvassingSaved={() => fetchTasksAndVolunteers()}
             />
 
-            {/* Bottom Navigation Tab Bar */}
-            <View style={styles.bottomNavTabBar}>
-              <TouchableOpacity
-                style={styles.bottomNavTabButton}
-                onPress={() => setDashboardTab('home')}
-              >
-                <Feather
-                  name="home"
-                  size={20}
-                  color={dashboardTab === 'home' ? PRIMARY_BLUE : '#4B5563'}
-                  style={{ marginBottom: 4 }}
-                />
-                <Text style={[styles.bottomNavTabLabel, dashboardTab === 'home' && styles.bottomNavTabActiveLabel]}>Beranda</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.bottomNavTabButton}
-                onPress={() => setDashboardTab('activity')}
-              >
-                <Feather
-                  name="check-square"
-                  size={20}
-                  color={dashboardTab === 'activity' ? PRIMARY_BLUE : '#4B5563'}
-                  style={{ marginBottom: 4 }}
-                />
-                <Text style={[styles.bottomNavTabLabel, dashboardTab === 'activity' && styles.bottomNavTabActiveLabel]}>Tugas</Text>
-              </TouchableOpacity>
-
-              {/* Tab 3: Relawan for Officer / Canvassing for Volunteer */}
-              {isOfficerUser(user) ? (
-                <TouchableOpacity
-                  style={styles.bottomNavTabButton}
-                  onPress={() => setDashboardTab('relawan')}
-                >
-                  <View>
-                    <Feather
-                      name="users"
-                      size={20}
-                      color={dashboardTab === 'relawan' ? PRIMARY_BLUE : '#4B5563'}
-                      style={{ marginBottom: 4 }}
-                    />
-                    {pendingVolunteers.length > 0 && <View style={styles.notifBadgeDot} />}
-                  </View>
-                  <Text style={[styles.bottomNavTabLabel, dashboardTab === 'relawan' && styles.bottomNavTabActiveLabel]}>Relawan</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.bottomNavTabButton}
-                  onPress={() => setDashboardTab('canvassing')}
-                >
-                  <Feather
-                    name="users"
-                    size={20}
-                    color={dashboardTab === 'canvassing' ? PRIMARY_BLUE : '#4B5563'}
-                    style={{ marginBottom: 4 }}
-                  />
-                  <Text style={[styles.bottomNavTabLabel, dashboardTab === 'canvassing' && styles.bottomNavTabActiveLabel]}>Canvassing</Text>
-                </TouchableOpacity>
-              )}
-
-
-
-              <TouchableOpacity
-                style={styles.bottomNavTabButton}
-                onPress={() => setDashboardTab('profile')}
-              >
-                <Feather
-                  name="user"
-                  size={20}
-                  color={dashboardTab === 'profile' ? PRIMARY_BLUE : '#4B5563'}
-                  style={{ marginBottom: 4 }}
-                />
-                <Text style={[styles.bottomNavTabLabel, dashboardTab === 'profile' && styles.bottomNavTabActiveLabel]}>Profil</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Bottom Navigation Tab Bar Component */}
+            <BottomNav
+              dashboardTab={dashboardTab}
+              setDashboardTab={setDashboardTab}
+              isOfficer={isOfficerUser(user)}
+              pendingVolunteersCount={pendingVolunteers.length}
+            />
           </View>
         )}
 
         {screen === 'VOLUNTEER_FORM' && (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.flex1}
-          >
-            {/* Form Header with Linear Gradient & Stepper */}
-            <LinearGradient
-              colors={['#21439A', '#1a3580']}
-              style={styles.formHeaderGradient}
-            >
-              <View style={styles.formHeaderRow}>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (formStep > 1) {
-                      setFormStep(formStep - 1);
-                    } else {
-                      Alert.alert('Batal', 'Draft Anda telah otomatis tersimpan. Anda bisa melanjutkannya nanti.', [
-                        { text: 'Batal', style: 'cancel' },
-                        { text: 'Oke', onPress: () => setScreen('DASHBOARD') }
-                      ]);
-                    }
-                  }}
-                  style={styles.backBtn}
-                >
-                  <Text style={styles.backBtnText}>←</Text>
-                </TouchableOpacity>
-                <Text style={styles.formTitle}>Lengkapi Profil Volunteer</Text>
-              </View>
-
-              {/* Progress Stepper Bar */}
-              <View style={styles.progressStepperContainer}>
-                <View style={styles.progressStepperTextRow}>
-                  <Text style={styles.progressStepperStepText}>Langkah {formStep} dari 3</Text>
-                  <Text style={styles.progressStepperLabelText}>
-                    {formStep === 1 ? 'Data Diri & Kontak' : formStep === 2 ? 'Keahlian & Minat' : 'Alamat & Esai'}
-                  </Text>
-                </View>
-                <View style={styles.progressStepperTrack}>
-                  <View
-                    style={[
-                      styles.progressStepperFill,
-                      { width: `${(formStep / 3) * 100}%` }
-                    ]}
-                  />
-                </View>
-              </View>
-            </LinearGradient>
-
-            {/* Step dots */}
-            <View style={styles.stepDotsContainer}>
-              {[1, 2, 3].map((s) => (
-                <View
-                  key={s}
-                  style={[
-                    styles.stepDot,
-                    s === formStep ? styles.stepDotActive : s < formStep ? styles.stepDotCompleted : null
-                  ]}
-                />
-              ))}
-            </View>
-
-            {/* Scrollable form body */}
-            <ScrollView
-              contentContainerStyle={styles.formScrollContent}
-              keyboardShouldPersistTaps="handled"
-              style={styles.transparentBg}
-            >
-              {/* Step Header */}
-              <View style={styles.stepHeaderContainer}>
-                <Text style={styles.stepHeaderTitle}>
-                  {formStep === 1 ? 'Data Diri & Kontak' : formStep === 2 ? 'Keahlian & Bidang Minat' : 'Alamat & Esai Motivasi'}
-                </Text>
-                {formStep === 1 && (
-                  <Text style={styles.stepHeaderSubtitle}>Lengkapi data diri Anda dengan benar.</Text>
-                )}
-              </View>
-
-              {formStep === 1 && (
-                <View style={styles.card}>
-                  <Text style={styles.inputLabel}>Nomor WhatsApp</Text>
-                  <TextInput
-                    style={styles.cleanTextInput}
-                    placeholder="Contoh: 081234567890"
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                    placeholderTextColor="#9CA3AF"
-                  />
-
-                  <Text style={styles.inputLabel}>Tanggal Lahir</Text>
-                  <TouchableOpacity
-                    style={styles.datePickerTrigger}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text style={birthdate ? styles.datePickerText : styles.datePickerPlaceholder}>
-                      {birthdate || 'Pilih Tanggal Lahir'}
-                    </Text>
-                    <Feather name="calendar" size={16} color="#6B7280" />
-                  </TouchableOpacity>
-
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={birthdate ? new Date(birthdate) : new Date(2000, 0, 1)}
-                      mode="date"
-                      display="default"
-                      maximumDate={new Date()}
-                      onValueChange={(event, selectedDate) => {
-                        if (selectedDate) {
-                          const year = selectedDate.getFullYear();
-                          const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                          const day = String(selectedDate.getDate()).padStart(2, '0');
-                          setBirthdate(`${year}-${month}-${day}`);
-                        }
-                      }}
-                      onDismiss={() => setShowDatePicker(false)}
-                    />
-                  )}
-
-                  <Text style={styles.inputLabel}>Jenis Kelamin</Text>
-                  <View style={styles.radioGroup}>
-                    <TouchableOpacity
-                      style={styles.radioOption}
-                      onPress={() => setGender('MALE')}
-                    >
-                      <View style={[styles.radioButton, gender === 'MALE' && styles.radioButtonSelected]}>
-                        {gender === 'MALE' && <View style={styles.radioButtonInner} />}
-                      </View>
-                      <Text style={[styles.radioLabel, gender === 'MALE' && styles.radioLabelSelected]}>LAKI-LAKI</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.radioOption}
-                      onPress={() => setGender('FEMALE')}
-                    >
-                      <View style={[styles.radioButton, gender === 'FEMALE' && styles.radioButtonSelected]}>
-                        {gender === 'FEMALE' && <View style={styles.radioButtonInner} />}
-                      </View>
-                      <Text style={[styles.radioLabel, gender === 'FEMALE' && styles.radioLabelSelected]}>PEREMPUAN</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={styles.inputLabel}>Pekerjaan Saat Ini</Text>
-                  <TextInput
-                    style={styles.cleanTextInput}
-                    placeholder="Contoh: Mahasiswa, Wiraswasta"
-                    value={occupation}
-                    onChangeText={setOccupation}
-                    placeholderTextColor="#9CA3AF"
-                  />
-
-                  {/* 4 Photo Upload Section in Step 1 */}
-                  <Text style={[styles.formGroupTitle, { marginTop: 22, marginBottom: 12 }]}>DOKUMENTASI FOTO (1 KTP & 3 FOTO BEBAS - OPSIONAL)</Text>
-                  <View style={styles.photoGrid}>
-                    {/* Box 1: Foto KTP */}
-                    <TouchableOpacity style={styles.photoBox} onPress={() => handlePickPhoto('ktp')}>
-                      {photoKtp ? (
-                        <Image source={{ uri: photoKtp }} style={styles.photoPreview} />
-                      ) : (
-                        <View style={styles.photoPlaceholder}>
-                          <Feather name="credit-card" size={24} color={PRIMARY_BLUE} />
-                          <Text style={styles.photoBoxTitle}>Foto KTP</Text>
-                          <Text style={styles.photoBoxSub}>Ketuk untuk unggah (Opsional)</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* Box 2: Foto Bebas 1 */}
-                    <TouchableOpacity style={styles.photoBox} onPress={() => handlePickPhoto('free1')}>
-                      {photoFree1 ? (
-                        <Image source={{ uri: photoFree1 }} style={styles.photoPreview} />
-                      ) : (
-                        <View style={styles.photoPlaceholder}>
-                          <Feather name="camera" size={24} color={PRIMARY_BLUE} />
-                          <Text style={styles.photoBoxTitle}>Foto Bebas 1</Text>
-                          <Text style={styles.photoBoxSub}>Ketuk untuk unggah (Opsional)</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* Box 3: Foto Bebas 2 */}
-                    <TouchableOpacity style={styles.photoBox} onPress={() => handlePickPhoto('free2')}>
-                      {photoFree2 ? (
-                        <Image source={{ uri: photoFree2 }} style={styles.photoPreview} />
-                      ) : (
-                        <View style={styles.photoPlaceholder}>
-                          <Feather name="image" size={24} color={PRIMARY_BLUE} />
-                          <Text style={styles.photoBoxTitle}>Foto Bebas 2</Text>
-                          <Text style={styles.photoBoxSub}>Ketuk untuk unggah (Opsional)</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-
-                    {/* Box 4: Foto Bebas 3 */}
-                    <TouchableOpacity style={styles.photoBox} onPress={() => handlePickPhoto('free3')}>
-                      {photoFree3 ? (
-                        <Image source={{ uri: photoFree3 }} style={styles.photoPreview} />
-                      ) : (
-                        <View style={styles.photoPlaceholder}>
-                          <Feather name="grid" size={24} color={PRIMARY_BLUE} />
-                          <Text style={styles.photoBoxTitle}>Foto Bebas 3</Text>
-                          <Text style={styles.photoBoxSub}>Ketuk untuk unggah (Opsional)</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-
-              {formStep === 2 && (
-                <View style={styles.card}>
-                  <Text style={styles.inputLabel}>Pilih Keahlian Anda (Bisa pilih lebih dari satu)</Text>
-                  <View style={styles.tagsContainer}>
-                    {availableSkills.map((item) => {
-                      const selected = skills.includes(item);
-                      return (
-                        <TouchableOpacity
-                          key={item}
-                          style={[styles.tag, selected && styles.tagActive]}
-                          onPress={() => toggleSkill(item)}
-                        >
-                          <Text style={[styles.tagText, selected && styles.tagTextActive]}>{item}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  <Text style={[styles.inputLabel, { marginTop: 20 }]}>Pilih Bidang Minat (Bisa pilih lebih dari satu)</Text>
-                  <View style={styles.tagsContainer}>
-                    {availableInterests.map((item) => {
-                      const selected = interests.includes(item);
-                      return (
-                        <TouchableOpacity
-                          key={item}
-                          style={[styles.tag, selected && styles.tagActive]}
-                          onPress={() => toggleInterest(item)}
-                        >
-                          <Text style={[styles.tagText, selected && styles.tagTextActive]}>{item}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-
-              {formStep === 3 && (
-                <View style={styles.card}>
-                  <Text style={styles.inputLabel}>Alamat Detail (Jalan, RT/RW, Dusun)</Text>
-                  <TextInput
-                    style={[styles.cleanTextInput, styles.textArea]}
-                    placeholder="Contoh: Jl. Pemuda No. 4, RT 01 / RW 02"
-                    value={addressDetail}
-                    onChangeText={setAddressDetail}
-                    multiline
-                    numberOfLines={3}
-                    placeholderTextColor="#9CA3AF"
-                  />
-
-                  {/* Coverage Area RT / RW Section */}
-                  <Text style={[styles.formGroupTitle, { marginTop: 20, marginBottom: 4 }]}>
-                    WILAYAH COVERAGE / CAKUPAN PENUGASAN (RT / RW)
-                  </Text>
-                  <Text style={styles.coverageSubtitle}>
-                    Tentukan nomor RT dan RW di wilayah kelurahan Anda yang dapat Anda jangkau sebagai relawan.
-                  </Text>
-
-                  {coverageArea.map((item, index) => (
-                    <View key={index} style={styles.coverageRowContainer}>
-                      <View style={styles.coverageInputGroup}>
-                        <Text style={styles.coverageInputLabel}>Nomor RT</Text>
-                        <TextInput
-                          style={styles.coverageInput}
-                          placeholder="Misal: 03"
-                          keyboardType="number-pad"
-                          value={item.rt}
-                          onChangeText={(val) => updateCoverageRow(index, 'rt', val)}
-                          placeholderTextColor="#9CA3AF"
-                        />
-                      </View>
-
-                      <View style={styles.coverageInputGroup}>
-                        <Text style={styles.coverageInputLabel}>Nomor RW</Text>
-                        <TextInput
-                          style={styles.coverageInput}
-                          placeholder="Misal: 03"
-                          keyboardType="number-pad"
-                          value={item.rw}
-                          onChangeText={(val) => updateCoverageRow(index, 'rw', val)}
-                          placeholderTextColor="#9CA3AF"
-                        />
-                      </View>
-
-                      <TouchableOpacity
-                        style={styles.coverageDeleteBtn}
-                        onPress={() => removeCoverageRow(index)}
-                      >
-                        <Feather name="trash-2" size={18} color="#DC2626" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-
-                  <TouchableOpacity style={styles.addCoverageBtn} onPress={addCoverageRow}>
-                    <Feather name="plus-circle" size={16} color={PRIMARY_BLUE} style={{ marginRight: 6 }} />
-                    <Text style={styles.addCoverageBtnText}>+ Tambah Area (RT/RW)</Text>
-                  </TouchableOpacity>
-
-                  <Text style={[styles.inputLabel, { marginTop: 10 }]}>Esai Motivasi (Minimal 20 Karakter)</Text>
-                  <TextInput
-                    style={[styles.cleanTextInput, styles.textArea]}
-                    placeholder="Tuliskan motivasi Anda ingin bergabung menjadi bagian dari GEMA Magelang..."
-                    value={motivation}
-                    onChangeText={setMotivation}
-                    multiline
-                    numberOfLines={5}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-              )}
-
-              {/* Draft disimpan otomatis di latar belakang */}
-            </ScrollView>
-
-            {/* Fixed Footer Buttons Container */}
-            <View style={styles.fixedFormFooter}>
-              {formStep > 1 && (
-                <TouchableOpacity
-                  style={styles.formFooterBackBtn}
-                  onPress={() => setFormStep(formStep - 1)}
-                >
-                  <Text style={styles.formFooterBackBtnText}>Kembali</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={[styles.primaryAuthBtn, { flex: formStep > 1 ? 2 : 1 }]}
-                onPress={() => {
-                  if (formStep === 1) {
-                    if (!phone || !birthdate || !occupation) {
-                      Alert.alert('Validasi', 'Mohon lengkapi seluruh field.');
-                    } else {
-                      setFormStep(2);
-                    }
-                  } else if (formStep === 2) {
-                    if (skills.length === 0 || interests.length === 0) {
-                      Alert.alert('Validasi', 'Mohon pilih minimal satu keahlian dan minat.');
-                    } else {
-                      setFormStep(3);
-                    }
-                  } else {
-                    handleSubmitProfile();
-                  }
-                }}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={WHITE} />
-                ) : (
-                  <Text style={styles.primaryAuthBtnText}>
-                    {formStep === 3 ? 'SIMPAN PROFIL' : 'LANJUTKAN'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
+          <VolunteerFormScreen
+            user={user}
+            token={token}
+            apiUrl={API_URL}
+            availableSkills={availableSkills}
+            availableInterests={availableInterests}
+            onSuccess={() => {
+              fetchUserProfile(token);
+              setScreen('DASHBOARD');
+            }}
+            onCancel={() => setScreen('DASHBOARD')}
+          />
         )}
 
         {screen === 'SUCCESS' && (

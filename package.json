@@ -19,7 +19,10 @@
     "react-native-safe-area-context": "~5.7.0"
   },
   "scripts": {
-    "start": "expo start",
+    "start": "npx expo start --clear",
+    "dev": "npx expo start --clear",
+    "release": "powershell -Command \"$env:JAVA_HOME='C:\\Program Files\\Android\\Android Studio\\jbr'; cd android; .\\gradlew.bat app:assembleRelease -x lint -x test\"",
+    "build:apk": "powershell -Command \"$env:JAVA_HOME='C:\\Program Files\\Android\\Android Studio\\jbr'; cd android; .\\gradlew.bat app:assembleRelease -x lint -x test\"",
     "android": "expo start --localhost --android",
     "web": "expo start --web"
   },

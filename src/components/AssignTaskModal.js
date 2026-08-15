@@ -31,6 +31,8 @@ export default function AssignTaskModal({
   const [volunteerQuery, setVolunteerQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [fetchedVolunteers, setFetchedVolunteers] = useState([]);
+  const [loadingVolunteers, setLoadingVolunteers] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -39,18 +41,52 @@ export default function AssignTaskModal({
       setSelectedVolunteerId('');
       setVolunteerQuery('');
       setDropdownOpen(false);
+      loadVolunteers();
     }
   }, [visible]);
 
-  // Filter volunteers strictly by officer's district_code unless SUPERADMIN
-  const filteredVolunteers = (approvedVolunteers || []).filter(v => {
+  const loadVolunteers = async () => {
+    try {
+      setLoadingVolunteers(true);
+      const res = await axios.get(`${apiUrl}/volunteers?status=APPROVED`);
+      if (res.data) {
+        const raw = res.data.data || res.data;
+        const list = Array.isArray(raw) ? raw : (raw.data || []);
+        if (list.length > 0) {
+          setFetchedVolunteers(list);
+          return;
+        }
+      }
+      // Fallback: fetch all volunteers
+      const allRes = await axios.get(`${apiUrl}/volunteers`);
+      if (allRes.data) {
+        const rawAll = allRes.data.data || allRes.data;
+        const listAll = Array.isArray(rawAll) ? rawAll : (rawAll.data || []);
+        setFetchedVolunteers(listAll);
+      }
+    } catch (e) {
+      console.log('Error fetching volunteers in modal:', e.message);
+      if (approvedVolunteers && approvedVolunteers.length > 0) {
+        setFetchedVolunteers(approvedVolunteers);
+      }
+    } finally {
+      setLoadingVolunteers(false);
+    }
+  };
+
+  const sourceVolunteers = fetchedVolunteers.length > 0 ? fetchedVolunteers : (approvedVolunteers || []);
+
+  // Filter volunteers by officer's district_code unless ADMIN/PENGURUS
+  const filteredVolunteers = sourceVolunteers.filter(v => {
     const roleName = (user?.roles?.[0]?.name || user?.role || '').toUpperCase();
-    if (roleName.includes('SUPERADMIN')) return true;
+    if (roleName.includes('ADMIN') || roleName.includes('PENGURUS') || roleName.includes('SUPERADMIN')) {
+      return true;
+    }
 
     const userDistrict = user?.district_code || user?.district?.code;
     const volDistrict = v.user?.district_code || v.district_code;
     if (!userDistrict || !volDistrict) return true;
-    return volDistrict === userDistrict;
+    return String(volDistrict).trim() === String(userDistrict).trim();
   });
 
   // Autocomplete real-time search filtering by name, phone, subdistrict
@@ -59,7 +95,7 @@ export default function AssignTaskModal({
     const q = volunteerQuery.toLowerCase().trim();
     const name = (v.user?.name || v.full_name || '').toLowerCase();
     const phone = (v.phone || v.user?.email || '').toLowerCase();
-    const subdistrict = (v.user?.subdistrict?.name || '').toLowerCase();
+    const subdistrict = (v.user?.subdistrict?.name || v.subdistrict_code || '').toLowerCase();
     return name.includes(q) || phone.includes(q) || subdistrict.includes(q);
   });
 

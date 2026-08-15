@@ -7,13 +7,21 @@ const DARK_GRAY = '#1E293B';
 const WHITE = '#FFFFFF';
 
 export default function TaskCard({ task, isOfficer, onStartTask, onCompleteTask }) {
-  const getStatusBadge = (status) => {
-    if (status === 'COMPLETED') return { color: '#16A34A', text: 'SELESAI' };
-    if (status === 'IN_PROGRESS') return { color: '#0284C7', text: 'BERJALAN' };
+  const statusUpper = (task.status || '').toUpperCase();
+
+  const getStatusBadge = (st) => {
+    if (st === 'COMPLETED') return { color: '#16A34A', text: 'SELESAI' };
+    if (st === 'IN_PROGRESS') return { color: '#0284C7', text: 'BERJALAN' };
     return { color: '#D97706', text: 'MENUNGGU' };
   };
 
-  const badge = getStatusBadge(task.status);
+  const badge = getStatusBadge(statusUpper);
+  const volName = task.volunteer?.user?.name 
+    || task.volunteer?.full_name 
+    || task.assigned_to_volunteer?.user?.name 
+    || task.assigned_to_volunteer?.full_name 
+    || task.assignee_name 
+    || '-';
 
   return (
     <View style={styles.taskCardItem}>
@@ -27,7 +35,7 @@ export default function TaskCard({ task, isOfficer, onStartTask, onCompleteTask 
       {task.description ? <Text style={styles.taskCardDesc}>{task.description}</Text> : null}
       
       <Text style={styles.taskCardSub}>
-        Relawan: {task.volunteer?.user?.name || task.volunteer?.full_name || '-'}
+        PIC Relawan: {volName}
       </Text>
 
       {/* Task Status Overview for Officer vs Action Buttons for Target Volunteer */}
@@ -35,13 +43,13 @@ export default function TaskCard({ task, isOfficer, onStartTask, onCompleteTask 
         <View style={{ marginTop: 8 }}>
           <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>
             Status Penugasan: <Text style={{ color: badge.color, fontWeight: '700' }}>
-              {task.status === 'COMPLETED' ? 'Selesai' : task.status === 'IN_PROGRESS' ? 'Sedang Dikerjakan Relawan' : 'Menunggu Diterima Relawan'}
+              {statusUpper === 'COMPLETED' ? 'Selesai' : statusUpper === 'IN_PROGRESS' ? 'Sedang Dikerjakan Relawan' : 'Menunggu Diterima Relawan'}
             </Text>
           </Text>
         </View>
       ) : (
         <View style={{ marginTop: 10, flexDirection: 'row', gap: 8 }}>
-          {task.status === 'PENDING' && (
+          {statusUpper === 'PENDING' && (
             <TouchableOpacity
               style={[styles.taskActionBtn, { backgroundColor: '#0284C7' }]}
               onPress={() => onStartTask && onStartTask(task.id)}
@@ -51,7 +59,7 @@ export default function TaskCard({ task, isOfficer, onStartTask, onCompleteTask 
             </TouchableOpacity>
           )}
 
-          {task.status === 'IN_PROGRESS' && (
+          {statusUpper === 'IN_PROGRESS' && (
             <TouchableOpacity
               style={[styles.taskActionBtn, { backgroundColor: '#16A34A' }]}
               onPress={() => onCompleteTask && onCompleteTask(task.id)}
@@ -61,7 +69,7 @@ export default function TaskCard({ task, isOfficer, onStartTask, onCompleteTask 
             </TouchableOpacity>
           )}
 
-          {task.status === 'COMPLETED' && (
+          {statusUpper === 'COMPLETED' && (
             <Text style={{ fontSize: 12, color: '#16A34A', fontWeight: '700' }}>
               ✓ Task telah diselesaikan
             </Text>
